@@ -1,0 +1,314 @@
+### Question 1
+
+## First, I renamed the dataset to inspection_data. 
+inspection_data <- read.csv("restaurant_inspections.csv")
+
+
+# Then I used the ggplot function to create the histogram. The first line of code specifies that the plot will use inspection_data, and the SCORE column will be on the x-axis. 
+ggplot(inspection_data, aes(x = SCORE)) +
+
+  #The second line of code creates a histogram where each bar represents a score range of 2. I made it so that the bars are colored pink with black borders. 
+  geom_histogram(binwidth = 2, fill = "pink", color = "black") +
+
+  # The labs function allowed me to add labels for the title, x-axis ("Inspection Score"), and y-axis ("Frequency").
+  labs(title = "Distribution of Inspection Scores", x = "Inspection Score", y = "Frequency") +
+
+  ##Lastly I just used theme_miminal to make it look better.  
+   theme_minimal()
+
+##Question 2
+
+# First, I loaded the dataset from my local file path into the variable df (dataframe).
+df = read.csv("/Users/sophiahaig/Desktop/PLAN372/restaurant_inspections.csv")
+
+
+# Next, I filtered the dataset to exclude rows where the columns RESTAURANTOPENDATE, DATE, or SCORE have missing values. This ensures that my analysis is based on complete and accurate data. This is necessary for making an accurate conclusion about if there is a trend in how older vs. newer restaurants score on their inspections.
+df <- df[!is.na(df$RESTAURANTOPENDATE) & !is.na(df$DATE_) & !is.na(df$SCORE), ]
+
+
+#Then, I calculated the age of each restaurant by subtracting the restaurant's opening date  from the inspection date. I then converted the difference from weeks to years by dividing by 52.
+df$age = as.numeric(difftime(df$DATE_, as.Date(df$RESTAURANTOPENDATE), units = "weeks"))/52
+
+#I retroactively had to use which.min(df$SCORE) to find an outlier that was messing up my plot. Then I used ggplot to make a scatter plot. I compared age (on the x-axis) against SCORE (on the y-axis). The specific row indexed by -1645 is excluded from the plot because it was skewing my results.
+ggplot(df[-1645,], aes(x = age, y = SCORE)) +
+
+# I used geom_point to add points to the scatter plot representing individual restaurants. Then I made them colored blue with a transparency level of 0.5.
+  geom_point(color = "blue", alpha = 0.5) +
+  
+# Then i used geom_smooth to make a linear regression line (method = "lm") to the scatter plot. This showed the trend in the relationship between restaurant age and inspection scores. The se = FALSE argument means that the shaded confidence interval around the regression line isn't viewable, providing a cleaner visualization. 
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  
+# Then, I used the labs function to set the title and labels for the x and y axes of the plot. 
+  labs(title = "Restaurant Age vs. Inspection Score",
+       x = "Restaurant Age (Years)",
+       y = "Inspection Score") +
+  
+#I used theme_minimal to make it look better. 
+    theme_minimal()
+
+#Results: This scatterplot shows that older restaurants have higher scores than newer ones. 
+
+##Question 3: Honestly, I have low confidence in my results on this one...  
+
+# First, I loaded the dataset from my local file path into the variable cleaned_datasetQ3.
+cleaned_datasetQ3 = read.csv("/Users/sophiahaig/Desktop/PLAN372/restaurant_inspections.csv")
+
+# Then I line filters cleaned_datasetQ3 to exclude any rows where the CITY or SCORE columns contain missing values. By removing rows with missing values, I'm making sure that my analysis of average inspection scores is based on complete data, increasing the accuracy of my results.
+cleaned_datasetQ3 <- cleaned_datasetQ3[!is.na(dataset$CITY) & !is.na(dataset$SCORE), ]
+
+# Then, I made sure to use the mutate function to correct any lower case city names and also recoded any typos I found to their correct spelling. This made my graph a lot easier to visualize and made the results accurate versus split up amongst different spellings. 
+cleaned_datasetQ3 <- cleaned_datasetQ3 %>%
+  mutate(CITY = str_to_upper(CITY)) %>%  
+  mutate(CITY = recode(CITY,
+                    
+            "FUQUAY VARINA" = "FUQUAY-VARINA", 
+             "HOLLY SPRING" = "HOLLY SPRINGS", 
+             "MORRISVILE" = "MORRISVILLE",
+                       
+                       .default = CITY))
+
+
+# In this block of code, I calculated the average inspection scores for each city in the dataset. I used cleaned_datasetQ3 %>% to start a data manipulation pipeline. Then I grouped the data by the CITY column so that the following actions are performed within each city group. Next, I used summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop') to create a new dataframe "average_scores" that contains each city and its corresponding average inspection score. The code na.rm = TRUE ensures that any NA values in the SCORE column are ignored when calculating the mean. The option .groups = 'drop' ensures that the grouping structure is dropped after summarization.
+
+average_scores <- cleaned_datasetQ3 %>%
+  group_by(CITY) %>%
+  summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop')
+
+
+# I used the ggplot(average_scores, aes(x = CITY, y = AVG_SCORE)) to create the plot and set the x-axis to CITY and the y-axis to AVG_SCORE.
+
+ggplot(average_scores, aes(x = CITY, y = AVG_SCORE)) +
+  
+# I used geom_bar(stat = "identity", fill = "pink") to add bars to the plot, where the height of each bar corresponds to the average inspection score for each city. I then made the bars pink. 
+  geom_bar(stat = "identity", fill = "pink") +
+  
+# I used the labs(...) function to sets the title and axis labels for the plot.  
+  labs(title = "Average Inspection Scores by City in Wake County",
+       x = "City",
+       y = "Average Inspection Score") +
+  
+  # Then I used theme_minimal()for a simple appearance/easy to follow. Then I used theme(axis.text.x = element_text(angle = 30, hjust = 1)) to improve readability since the city names are long but honestly it did not really help on my scree. I'm not sure if it's just on my screen or if the words are also hard to read for you. 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+
+###Results: While the results are mostly even, you can see that certain cities have very high scores of or around 100 such as New Hill, RTP (idk where or what city that is), and Holly Springs. Additionally, Angier and Zebulon have the lowest scores of the bunch near 90/high 80's.
+##Question 4
+
+# First, I filtered out rows where either the INSPECTOR or SCORE column has missing values to ensure that only complete data is used for the average scores. 
+cleaned_datasetQ4 <- dataset[!is.na(dataset$INSPECTOR) & !is.na(dataset$SCORE), ]
+
+# Then using the cleaned dataset, I grouped the data by the INSPECTOR column using groupby code.
+# Then, it calculates the average inspection score (AVG_SCORE) for each inspector using `summarize()`.
+# The `na.rm = TRUE` option ensures that any missing values in the SCORE column are ignored when calculating the average.
+# The `.groups = 'drop'` option drops the grouping structure after summarization.
+average_scores_inspector <- cleaned_datasetQ4 %>%
+  group_by(INSPECTOR) %>%
+  #Then, i calculated the average inspection score for each inspector using the summarize function.
+  summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop')
+
+# Next,I made a bar plot using ggplot. I set the X-axis to INSPECTOR, with the inspectors reordered based on their average score and the y-axis represents the average inspection score. Then I made it pink! 
+ggplot(average_scores_inspector, aes(x = reorder(INSPECTOR, AVG_SCORE), y = AVG_SCORE)) +
+  geom_bar(stat = "identity", fill = "pink") +
+  
+  #I used the labs function to name the chart and add the names for the x and y axis. 
+  labs(title = "Average Inspection Scores by Inspector",
+       x = "Inspector",
+       y = "Average Inspection Score") +
+  
+  #Then I used theme minimal like always to clean it up and tried rotating the words again to make them easier to read! Buttttt once again, it didn't help that much. 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+##Results: While most inspectors give scores above or around 90, there are a few who give consistantly lower scores in the high to low 80's such as Thomas Jumalon, Meghan Scott, Lucy Schrum. 
+
+##Question 6
+
+# First, I filtered out rows where either the FACILITYTYPE or SCORE column has missing values to ensure my analysis is based on complete observations only.
+cleaned_datasetQ6 <- dataset[!is.na(dataset$FACILITYTYPE) & !is.na(dataset$SCORE), ]
+
+# Then, I grouped the data by FACILITYTYPE, and then average inspection score (AVG_SCORE) is calculated for each type.
+# The `na.rm = TRUE` ensures that any NA values in the SCORE column are ignored when calculating the mean.
+average_scores_facility <- cleaned_datasetQ6 %>%
+  group_by(FACILITYTYPE) %>%
+  summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop') %>%
+  
+  # After I calculated the average scores, I ordered the results from highest to lowest using `arrange(desc function.
+
+  arrange(desc(AVG_SCORE))  
+
+# Then I viewed all the average scores per facility type.
+
+print(average_scores_facility)
+
+#  Thenn, I made a bar plot using ggplot. I made it so that the x-axis represents the facility type, and the y-axis represents the average inspection score. 
+ggplot(average_scores_facility, aes(x = reorder(FACILITYTYPE, AVG_SCORE), y = AVG_SCORE)) +
+ # Then i used geom_bar(stat = "identity") to add bars with heights that correspond to the AVG_SCORE for each facility type. Then I made it pink again! 
+  geom_bar(stat = "identity", fill = "pink") +
+# Then I just added the titles of the axies/chart   
+  labs(title = "Average Inspection Scores by Facility Type",
+       x = "Facility Type",
+       y = "Average Inspection Score") +
+  
+  # Then I used theme minimal like always to clean it up and tried rotating the words again to make them easier to read! And it worked!! 
+ 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+##Results: No, the scores are actually lower for restaurants than other facility types. (I hope that is right...)
+##Question 7
+
+# 1. Visualize the overall distribution of inspection scores using a histogram
+
+#I used the ggplot function to plot the restaurants_data results, making x axis the score and the y axis the count. I made it so it had pink bars and black borders. Then I used theme minimal to clean it up
+ggplot(restaurants_data, aes(x = SCORE)) +
+  geom_histogram(binwidth = 5, fill = "pink", color = "black", boundary = 0) +
+  labs(title = "Distribution of Inspection Scores for Restaurants",
+       x = "Inspection Score",
+       y = "Count") +
+  theme_minimal()
+
+# 2. Analyze if older restaurants score differently than newer ones
+
+#First, I converted the date difference between restaurant opening and inspection date into years.
+# Then I made the "restaurant" dataset to include only rows where the FACILITYTYPE is "Restaurant".Then I used the difftime function to calculate the age of the restaurant in weeks, then dividing by 52 to convert to years.
+restaurant = filter(df, FACILITYTYPE == "Restaurant")
+restaurant$age = as.numeric(difftime(restaurant$DATE_, as.Date(restaurant$RESTAURANTOPENDATE), units = "weeks"))/52
+
+#There was another outlier so I had to retroactively use which.min(restaurant$SCORE) to find it and get rid of it. I used ggplot to plot the data, discluding the outlier at -1092. I made it so that the scatter plot has blue points and a red linear regression line fitted to the data. Then used theme minimal like always. 
+
+ggplot(restaurant[-1092,], aes(x = age, y = SCORE)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Restaurant Age vs. Inspection Score",
+       x = "Restaurant Age (Years)",
+       y = "Inspection Score") +
+  theme_minimal()
+##Results: Yes, older restaurants perform better than new ones. 
+
+#3: Analyze if inspection scores vary by city
+#First I made a new dataframe and then converted the city names to uppercase and got rid of mispellings using the mutate, str_to_upper, and recode functions. 
+average_scores_city <- restaurants_data %>%
+
+  mutate(CITY_CLEANED = str_to_upper(CITY)) %>%
+
+  mutate(CITY_CLEANED = recode(CITY_CLEANED,
+                   "FUQUAY VARINA" = "FUQUAY-VARINA", 
+                   "HOLLY SPRING" = "HOLLY SPRINGS", 
+                    "MORRISVILE" = "MORRISVILLE",
+                      .default = CITY_CLEANED)) %>%
+  # Then, I grouped the dataframe by the cleaned city names and calculated the average score. Then I sorted them by average score using the arrange (desc function. 
+  group_by(CITY_CLEANED) %>%
+  summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop') %>%
+  arrange(desc(AVG_SCORE))  
+
+# Then I viewed the average scores by city for restaurants using the print function. 
+print(average_scores_city)
+
+# I used the gglot function and made it so the x axis is the city and y axis as their scores. 
+ggplot(average_scores_city, aes(x = reorder(CITY_CLEANED, AVG_SCORE), y = AVG_SCORE)) +
+  
+  #Then I made the bars violet! and added names for the axises and chart title using the labs function. 
+  geom_bar(stat = "identity", fill = "violet") +
+  labs(title = "Average Inspection Scores by City for Restaurants",
+       x = "City",
+       y = "Average Inspection Score") +
+#Lasly, i used theme minimal like always and tried to rotate the names again so it looked better. 
+    theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+##Clayton, Zebulon, and Angier have the lowest scores of them all whereas research triangle park, RTP, and new hill have the highest. 
+
+# 4. Analyze if inspection scores vary by inspector
+
+# First I grouped the data by the INSPECTOR column, and then grouped the dataset by the INSPECTOR variable, so calculations are done per inspector in the second line.
+average_scores_inspector <- restaurants_data %>%
+  group_by(INSPECTOR) %>%
+  
+#Then I calculate the average inspection score for each inspector using summarize and made na values not included using na.rm= true. In previous questions, I was getting rid of them twice and didn't notice. Then made it so it was arranged in descending order. 
+  summarize(AVG_SCORE = mean(SCORE, na.rm = TRUE), .groups = 'drop') %>%
+  arrange(desc(AVG_SCORE))
+
+# Then I viewed the results using print function. 
+print(average_scores_inspector)
+
+# Then I made a plot using ggplot of the average inspection scores by inspector.
+ggplot(average_scores_inspector, aes(x = reorder(INSPECTOR, AVG_SCORE), y = AVG_SCORE)) +
+  #I used geom_bar to create a bar chart of light green bars.
+  geom_bar(stat = "identity", fill = "lightgreen") +
+  
+  #labeled and named my chart
+  labs(title = "Average Inspection Scores by Inspector for Restaurants",
+       x = "Inspector",
+       y = "Average Inspection Score") +
+  
+  #cleaned it up using theme minimal like always and rotated words 
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# 5. Calculate sample sizes for each facility type
+
+#Made a sample size dataframe for facilities out of the original dataset
+sample_sizes_facility <- dataset %>%
+  #filtered out na values using filter function 
+  filter(!is.na(FACILITYTYPE)) %>% 
+  #used groupby to group by facility type
+  group_by(FACILITYTYPE) %>% 
+  # used summarize to count the number of inspections
+  summarize(SAMPLE_SIZE = n(), .groups = 'drop') %>%  
+ # Sort by sample size in descending order
+   arrange(desc(SAMPLE_SIZE))         
+
+# Printed sample sizes for all facility types using pritn function 
+print(sample_sizes_facility)
+
+# Extracted the sample size specifically for restaurants only instead of all facility types 
+restaurant_sample_size <- sample_sizes_facility %>%
+  filter(FACILITYTYPE == "Restaurant")  
+
+# Printed the sample size for restaurants only 
+print(restaurant_sample_size)
+
+
+#Results: In question 6 I found that, among various facility types, restaurants had the lowest average inspection scores. In contrast, other facility types, such as elderly nutrition sites and limited food services, exhibited significantly higher inspection scores. However, in this question I found that  restaurants also had the highest sample size, more than double that of the second-largest facility type. This large sample size implies that restaurants had more opportunities to receive lower scores, which could explain their overall lower average. Conversely, the high scores for facilities like elderly nutrition sites and limited food services may be influenced by their smaller sample sizes, suggesting that their averages may not be as reliable due to fewer inspection opportunities.
+
+
+#Question 5: Honestly I was confused on this one. 
+
+#BY CITY 
+
+#Made a new dataframe called sample sizes city out of the restaurants dataframe. Then I followed the same process in Question 3 and Question 6 part 3. I used mutate and made the names of cities capitalized and all spelled the same. 
+sample_sizes_city <- restaurants_data %>%
+  mutate(CITY_CLEANED = str_to_upper(CITY)) %>% 
+  mutate(CITY_CLEANED = recode(CITY_CLEANED,     
+                                "FUQUAY VARINA" = "FUQUAY-VARINA", 
+                                "HOLLY SPRING" = "HOLLY SPRINGS", 
+                                "MORRISVILE" = "MORRISVILLE", 
+                                .default = CITY_CLEANED)) %>%  
+  #Then I used groupby to group the cleaned city names.
+  group_by(CITY_CLEANED) %>%  
+  #Used summarize to count the number of inspections 
+  summarize(SAMPLE_SIZE = n(), .groups = 'drop') %>%  
+  # sorted by sample size in descending order
+  arrange(desc(SAMPLE_SIZE)) 
+
+#viewed results 
+print(sample_sizes_city) 
+
+##Results: Zebulon and Angier had lower sample sizes compared to larger cities, which could explain why they were among the lowest scoring cities in terms of inspection scores. With fewer inspections, these cities had less opportunities to achieve higher scores, making their averages more susceptible to being influenced by any outlier results. In contrast, larger cities, with more inspections, have a more reliable representation of their overall performance.
+
+#inspectors 
+
+#made a new dataframe for sample size inspectors 
+sample_sizes_inspector <- restaurants_data %>%
+  #Used groupby to group by inspectors 
+  group_by(INSPECTOR) %>%  
+  # Counted the number of inspections for each inspector and sorted by sample size in descending order
+  summarize(SAMPLE_SIZE = n(), .groups = 'drop') %>%  
+  arrange(desc(SAMPLE_SIZE))  
+
+# View the sample sizes by inspector
+print(sample_sizes_inspector)
+
+##Results: Meghan Scott had only 29 inspections, which likely contributed to her lower average score. With such a small sample size, her average is more susceptible to fluctuations based on the few inspections did. If she had more inspections, it’s possible that her average score could have been higher, as a larger number of evaluations would provide a more complete view of her performance. However, Lucy Schrum who also has a low average of inspection ratings had 86 inspections, which proves that a larger sample size did not influlence her rating averages.
